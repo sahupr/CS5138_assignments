@@ -1,0 +1,7 @@
+Target number: 0xb1146800120
+result is = 0x4550
+size of sections =  3770
+number of sections = 94
+temp is = 0x848904c4 4634
+71c24
+target number 0xb1146800 found!!

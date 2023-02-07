@@ -11,11 +11,17 @@
 extern int errno;
 
 #define SIZE_OF_SECTION_HEADER 40
+// #define TARGET_NUMBER 0xb1146800
 
 int main()
 {
     uint32_t number = 0;
+    uint32_t temp = 0;
     uint16_t totalSectionsSize = 0;
+    uint32_t TARGET_NUMBER = 0xb1146800;
+
+    // scanf("Enter byte to search: %d", &searchbytes);
+    printf("Target number: 0x%x", TARGET_NUMBER);
 
     int fd = open("./sample.exe", O_RDONLY);
 
@@ -55,7 +61,7 @@ int main()
         return 1;
     }
 
-    printf("result is = %d\n", number);
+    printf("result is = 0x%x\n", number);
 
     //calculating the size of all sections combined
     int sizeOfSections = 0;
@@ -76,7 +82,41 @@ int main()
     printf("number of sections = %d\n", numberOfSections);
     
     //seeking to the beginning of the section header
-    lseek(fd, 228+number, SEEK_SET);    
+    lseek(fd, 228+number, SEEK_SET);
+    read(fd, &temp, sizeof(uint32_t));
+    printf("temp is = 0x%x %x\n", temp, 228+number);
+
+    int n=0;
+    
+    //read through the file until you reach the target set of bytes
+
+    //DOESN'T READ THE 4 BYTES IMMEDIATELY NEXT TO THE POINTER FOR SOME REASON
+
+    int count = 0;
+    while (read(fd, &n, sizeof(uint32_t))) {
+        if (n == TARGET_NUMBER){
+            printf("target number 0x%x found!!\n", n);
+            break;
+        }
+        else {
+            printf("%x\n", n);
+            count+=1;
+            // lseek(fd, 1, SEEK_CUR);
+            continue;
+        }
+    }
+
+    // Now `n` stores the requried bytes
+    // `count` stores the number of individual 4 byte reads that the program makes
+    // Calculating the offset of the target bytes will require us find the remainder of the number of bytes read from
+    // size of the section header
+
+    int offset = ((count*4) % SIZE_OF_SECTION_HEADER)+4;
+    printf("offset = %d\n", offset);
+
+    // now this offset needs to be added on to the physical address of the section on disk
+
+
 
     close(fd);
     return 0;
