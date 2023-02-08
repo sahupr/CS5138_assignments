@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include <string.h>
@@ -10,7 +11,7 @@
 
 extern int errno;
 
-int main()
+int main(int argc, char* argv[])
 {
     uint32_t number = 0;
     uint32_t temp = 0;
@@ -26,7 +27,26 @@ int main()
     // scanf("Enter byte to search: %d", &searchbytes);
     // printf("Target number: 0x%x\n", TARGET_NUMBER);
 
-    int fd = open("./sample.exe", O_RDONLY);
+    if(argc != 3){
+        printf("Incorrect number of arguments provided (must be 2)!\n");
+        return 1;
+    }
+
+    int fd = open(argv[1], O_RDONLY);
+
+    char* hex_value = argv[2];
+
+    char* temp_string = &hex_value[2];
+    TARGET_NUMBER= (int)strtol(temp_string, NULL, 16);
+    printf("%x\n", TARGET_NUMBER);
+
+
+    // printf("%s, %x\n", &hex_value[2], TARGET_NUMBER);
+
+    // if((strcmp(&hex_value[0], "0") == 0) && (strcmp(&hex_value[1], "x") == 0)) {
+    //     printf("hexadecimal %s\n", argv[2]);
+    //     TARGET_NUMBER = (uint32_t)hex_value;
+    // }
 
     //open the file and check to see if it causes an error while opening
     if (fd < 0) {
@@ -128,11 +148,13 @@ int main()
         read(fd, &virtualAddressOfSection, sizeof(uint32_t));
         count+=40;
 
-        if (count>=252) 
-            break;
+        if (count>=252){
+            printf("0x%x -> ??", TARGET_NUMBER);
+            return 1;
+        }
     }
 
-    printf("count= %d\n", count);
+    // printf("count= %d\n", count);
 
     // FINDING THE OFFSET
 
@@ -142,7 +164,7 @@ int main()
 
     int offset = TARGET_NUMBER - targetSectionAddress;
 
-    printf("offset: 0x%x - 0x%x = 0x%x\n", TARGET_NUMBER, targetSectionAddress, offset);
+    // printf("offset: 0x%x - 0x%x = 0x%x\n", TARGET_NUMBER, targetSectionAddress, offset);
 
     //finding the physical address on disk for the requested byte address
     lseek(fd, number+248+count-40+8, SEEK_SET);
@@ -150,7 +172,9 @@ int main()
 
     int targetNumberOnPhysicalDisk = offset + targetRawAddress;
 
-    printf("FINAL ANSWER: 0x%x + 0x%x = 0x%x\n", offset, targetRawAddress, targetNumberOnPhysicalDisk);
+    // printf("FINAL ANSWER: 0x%x + 0x%x = 0x%x\n", offset, targetRawAddress, targetNumberOnPhysicalDisk);
+
+    printf("0x%x -> 0x%x", TARGET_NUMBER, targetNumberOnPhysicalDisk);
 
     close(fd);
     return 0;
