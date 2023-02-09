@@ -37,11 +37,19 @@ int main(int argc, char* argv[])
         }
     }
 
-    char* hex_value = argv[2];
+    char* value = argv[2];
     char* filename = argv[1];
-    char* temp_string = &hex_value[2];
+    char* temp_string = &value[2];
 
-    TARGET_NUMBER= (int)strtol(temp_string, NULL, 16);
+    if(value[1]=='x') {
+        TARGET_NUMBER= (int)strtol(temp_string, NULL, 16);
+    }
+    else {
+       int value = strtol(argv[2], NULL, 10);
+       char buffer[10];
+       sprintf (buffer, "%x", value);
+       TARGET_NUMBER = strtol(buffer, NULL, 16);
+    }
     // printf("%c\n", argv[2][2]);
 
     int fd = open(filename, O_RDONLY);
