@@ -23,19 +23,20 @@ int main(int argc, char* argv[])
     uint32_t TARGET_NUMBER = 0;
 
     int numberOfSections = 0;
+    int sizeOfSectionHeader = 40;
 
-    if(argc != 3){
+     if(argc != 3){
         printf("Incorrect number of arguments provided (must be 2)!\n");
         return 1;
     }
-
-    int fd = open(argv[1], O_RDONLY);
 
     char* hex_value = argv[2];
     char* temp_string = &hex_value[2];
 
     TARGET_NUMBER= (int)strtol(temp_string, NULL, 16);
-    printf("%x\n", TARGET_NUMBER);
+    // printf("%x\n", TARGET_NUMBER);
+
+    int fd = open("./sample.exe", O_RDONLY);
 
     //open the file and check to see if it causes an error while opening
     if (fd < 0) {
@@ -46,7 +47,7 @@ int main(int argc, char* argv[])
     //seek to the 60th byte from the beginning of the file [inside _IMAGE_DOS_HEADER]
     lseek(fd, 60, SEEK_SET);
     int result = read(fd, &number, sizeof(uint32_t));
-    printf("seeking to 60: %d\n", number);
+    //printf("seeking to 60: %d\n", number);
     if (result != sizeof(uint32_t)) {
         printf("Did not read the entire index: %s\n", strerror(errno));
         close(fd);
@@ -66,7 +67,7 @@ int main(int argc, char* argv[])
      //finding the imageBase
     int imageBase = 0;
     lseek(fd, number+52, SEEK_SET);
-    printf("seeking to 60+52: %d\n", number);
+    //printf("seeking to 60+52: %d\n", number);
     imageBase = read(fd, &imageBaseSize, sizeof(uint32_t));
     // printf("size of image base =  %x bytes\n", imageBaseSize);
      if (imageBase != sizeof(uint32_t)) {
@@ -78,7 +79,7 @@ int main(int argc, char* argv[])
     //calculating the size of all sections combined
     int sizeOfSections = 0;
     lseek(fd, number+28, SEEK_SET);
-    printf("seeking to 60+28: %d\n", number);
+    //printf("seeking to 60+28: %d\n", number);
     sizeOfSections = read(fd, &totalSectionsSize, sizeof(uint32_t));
     // printf("size of sections =  %d bytes\n", totalSectionsSize);
      if (sizeOfSections != sizeof(uint32_t)) {
@@ -90,7 +91,7 @@ int main(int argc, char* argv[])
     //finding number of sections in the file
     int numSections = 0;
     lseek(fd, number+6, SEEK_SET);
-    printf("seeking to 60+6: %d\n", number);
+    //printf("seeking to 60+6: %d\n", number);
     numSections = read(fd, &numberOfSections, sizeof(uint16_t));
     //  printf("number of sections =  %d\n", numberOfSections);
      if (numSections != sizeof(uint16_t)) {
@@ -108,7 +109,7 @@ int main(int argc, char* argv[])
   
     int imageOptionalHeader = 0;
     lseek(fd, number+24, SEEK_SET);
-    printf("seeking to 60+24: %d\n", number);
+    //printf("seeking to 60+24: %d\n", number);
     result = read(fd, &temp, sizeof(uint32_t));
     if (result != sizeof(uint32_t)) {
         printf("Did not read the target value: %s\n", strerror(errno));
@@ -124,45 +125,57 @@ int main(int argc, char* argv[])
     //seeking into the beginning of the section header
 
     lseek(fd, number+24+224, SEEK_SET);
-    printf("seeking to 60+228: %d\n", number);
+    //printf("seeking to 60+228: %d\n", number);
     read(fd, &temp, sizeof(uint32_t));
     // printf("\n0x%x\n", temp);
 
+    // adding the image base to the target number
+    TARGET_NUMBER += imageBaseSize;
+
     uint32_t virtualAddressOfSection = 0;
     int count = 12;
+    int loop_counter = 0;
 
     //finding the section where the data belongs to
     while(TARGET_NUMBER > virtualAddressOfSection) {
         lseek(fd, number+248+count, SEEK_SET);
         read(fd, &virtualAddressOfSection, sizeof(uint32_t));
-        count+=40;
-        printf("virtual address of section = 0x%x target=0x%x\n", virtualAddressOfSection, TARGET_NUMBER);
+        virtualAddressOfSection += imageBaseSize;
+        count+=sizeOfSectionHeader;
 
-        // if (count>=(number+248+(sizeOfEachSection*numberOfSections))){
-        //     printf("0x%x -> ??", TARGET_NUMBER);
-        //     return 1;
-        // }
+        // printf("%d\t%d\t0x%x\t0x%x\t0x%x\n", loop_counter, numberOfSections, TARGET_NUMBER, virtualAddressOfSection, virtualAddressOfSection+sizeOfEachSection);
+
+        if ((loop_counter >= numberOfSections) && (TARGET_NUMBER > (virtualAddressOfSection+sizeOfEachSection))) {
+            // printf("(in the if conditional) %d\t%d\t0x%x\t0x%x\n", loop_counter, numberOfSections, TARGET_NUMBER, virtualAddressOfSection);
+            // printf("%d\n", (numberOfSections*sizeOfSectionHeader)+12);
+            printf("0x%x -> ??\n", TARGET_NUMBER-imageBaseSize);
+            return 1;
+        }
+        
+        loop_counter+=1;
     }
+
+    // printf("count= %d\n", count);
 
     // FINDING THE OFFSET
 
     // find the virtual address of the section
-    lseek(fd, number+248+count-40, SEEK_SET);
+    lseek(fd, number+248+count-80, SEEK_SET);
     read(fd, &targetSectionAddress, sizeof(uint32_t));
 
-    int offset = TARGET_NUMBER+imageBaseSize - targetSectionAddress+imageBaseSize;
+    int offset = TARGET_NUMBER - (targetSectionAddress+imageBaseSize);
 
-    printf("offset: 0x%x - 0x%x = 0x%x\n", TARGET_NUMBER, targetSectionAddress, offset);
+    // printf("offset: 0x%x - 0x%x = 0x%x\n", TARGET_NUMBER, targetSectionAddress+imageBaseSize, offset);
 
     //finding the physical address on disk for the requested byte address
-    lseek(fd, number+248+count-40+8, SEEK_SET);
+    lseek(fd, number+248+count-80+8, SEEK_SET);
     read(fd, &targetRawAddress, sizeof(uint32_t));
 
     int targetNumberOnPhysicalDisk = offset + targetRawAddress;
 
-    printf("FINAL ANSWER: 0x%x + 0x%x = 0x%x\n", offset, targetRawAddress, targetNumberOnPhysicalDisk);
+    // printf("FINAL ANSWER: 0x%x + 0x%x = 0x%x\n", offset, targetRawAddress, targetNumberOnPhysicalDisk);
 
-    printf("0x%x -> 0x%x", TARGET_NUMBER, targetNumberOnPhysicalDisk);
+    printf("0x%x -> 0x%x\n", TARGET_NUMBER-imageBaseSize, targetNumberOnPhysicalDisk);
 
     close(fd);
     return 0;
