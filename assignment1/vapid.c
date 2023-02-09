@@ -30,17 +30,24 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    for (int i=0; i!='\0'; i++){
+        if (!((argv[2][i] >= 'a' && argv[2][i] <= 'f') || (argv[2][i] >= '0' && argv[2][i] <= '9')))
+            printf("Incorrect input! %s\n", strerror(errno));
+            return 1;
+    }
+
     char* hex_value = argv[2];
+    char* filename = argv[1];
     char* temp_string = &hex_value[2];
 
     TARGET_NUMBER= (int)strtol(temp_string, NULL, 16);
     // printf("%x\n", TARGET_NUMBER);
 
-    int fd = open("./sample.exe", O_RDONLY);
+    int fd = open(filename, O_RDONLY);
 
     //open the file and check to see if it causes an error while opening
     if (fd < 0) {
-        printf("Error opening file: %s", strerror(errno));
+        printf("Error opening file: %s\n", strerror(errno));
         return 1;
     }
     
@@ -145,7 +152,7 @@ int main(int argc, char* argv[])
 
         // printf("%d\t%d\t0x%x\t0x%x\t0x%x\n", loop_counter, numberOfSections, TARGET_NUMBER, virtualAddressOfSection, virtualAddressOfSection+sizeOfEachSection);
 
-        if ((loop_counter >= numberOfSections) && (TARGET_NUMBER > (virtualAddressOfSection+sizeOfEachSection))) {
+        if ((loop_counter >= numberOfSections)) {
             // printf("(in the if conditional) %d\t%d\t0x%x\t0x%x\n", loop_counter, numberOfSections, TARGET_NUMBER, virtualAddressOfSection);
             // printf("%d\n", (numberOfSections*sizeOfSectionHeader)+12);
             printf("0x%x -> ??\n", TARGET_NUMBER-imageBaseSize);
