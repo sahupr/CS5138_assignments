@@ -30,10 +30,11 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    for (int i=0; i!='\0'; i++){
-        if (!((argv[2][i] >= 'a' && argv[2][i] <= 'f') || (argv[2][i] >= '0' && argv[2][i] <= '9')))
+    for (int i=2; i<strlen(argv[2]); i++) {
+        if (!((argv[2][i] >= 'a' && argv[2][i] <= 'f') || (argv[2][i] >= '0' && argv[2][i] <= '9'))) {
             printf("Incorrect input! %s\n", strerror(errno));
             return 1;
+        }
     }
 
     char* hex_value = argv[2];
@@ -41,7 +42,7 @@ int main(int argc, char* argv[])
     char* temp_string = &hex_value[2];
 
     TARGET_NUMBER= (int)strtol(temp_string, NULL, 16);
-    // printf("%x\n", TARGET_NUMBER);
+    // printf("%c\n", argv[2][2]);
 
     int fd = open(filename, O_RDONLY);
 
